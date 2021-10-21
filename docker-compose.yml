@@ -84,9 +84,34 @@ services:
     expose:
       - 9000
 
-#  graphite_clickhouse:
-#  grafana:
-# TODO
-#  fluentbit:
-#  elasticsearch:
-#  kibana:
+  # Metrics presentation
+  graphite-clickhouse:
+    container_name: graphite-clickhouse
+    image: lomik/graphite-clickhouse:latest
+    volumes:
+      - "./graphite-clickhouse.conf:/etc/graphite-clickhouse/graphite-clickhouse.conf"
+    expose:
+      - 9090
+    depends_on:
+      - clickhouse
+
+  # Metric functions
+  carbonapi:
+    container_name: carbonapi
+    image: gographite/carbonapi:v0.15.3
+    volumes:
+      - "./carbonapi.yml:/etc/carbonapi.yml"
+    expose:
+      - 8080
+    depends_on:
+      - graphite-clickhouse
+
+  # Metrics Web UI
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    volumes:
+      - "./provisioning:/etc/grafana/provisioning"
+    ports:
+      - 3000:3000
+

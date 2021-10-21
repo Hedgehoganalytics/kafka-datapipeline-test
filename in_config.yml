@@ -6,6 +6,13 @@ receivers:
     parser:
       type: plaintext
       config:
+  kafkametrics:
+    brokers:
+      - redpanda:29092
+    scrapers:
+      - brokers
+      - topics
+      - consumers
 
 exporters:
   kafka:
@@ -23,5 +30,5 @@ service:
       level: "error"
   pipelines:
     metrics:
-      receivers: [carbon, carbon/receiver_settings]
+      receivers: [carbon, carbon/receiver_settings, kafkametrics]
       exporters: [kafka]
