@@ -1,0 +1,17 @@
+receivers:
+  kafkametrics:
+    scrapers:
+      - brokers
+      - topics
+      - consumers
+    collection_interval: 1m
+
+exporters:
+  prometheus:
+    endpoint: ":9000"
+
+service:
+  pipelines:
+    metrics:
+      receivers: [kafkametrics]
+      exporters: [prometheus]

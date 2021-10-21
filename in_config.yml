@@ -1,0 +1,27 @@
+receivers:
+  carbon:
+  carbon/receiver_settings:
+    endpoint: 0.0.0.0:3003
+    transport: tcp
+    parser:
+      type: plaintext
+      config:
+
+exporters:
+  kafka:
+    brokers:
+      - redpanda:29092
+    sending_queue:
+      enabled: true
+      num_consumers: 10
+      queue_size: 100000
+
+
+service:
+  telemetry:
+    logs:
+      level: "error"
+  pipelines:
+    metrics:
+      receivers: [carbon, carbon/receiver_settings]
+      exporters: [kafka]

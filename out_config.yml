@@ -1,0 +1,21 @@
+receivers:
+  kafka:
+    topic: otlp_metrics
+    brokers:
+      - redpanda:29092
+
+exporters:
+  #  file:
+  #  path: /out.json
+  carbon:
+  carbon/allsettings:
+   endpoint: carbon-relay-ng:2003
+
+service:
+  telemetry:
+    logs:
+      level: "error"
+  pipelines:
+    metrics:
+      receivers: [kafka]
+      exporters: [carbon,carbon/allsettings]

@@ -1,0 +1,92 @@
+version: '3.7'
+services:
+
+  # "Kafka"
+  redpanda:
+    command:
+    - redpanda
+    - start
+    - --smp
+    - '1'
+    - --reserve-memory
+    - 0M
+    - --overprovisioned
+    - --node-id
+    - '0'
+    - --kafka-addr
+    - PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+    - --advertise-kafka-addr
+    - PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+    # NOTE: Please use the latest version here!
+    image: docker.vectorized.io/vectorized/redpanda:v21.9.5
+    container_name: redpanda
+    ports:
+    - 9092:9092
+    expose:
+    - 29092
+
+  # Listens for carbon metrics and forwards them to redpanda
+  otel-in:
+    image: otel/opentelemetry-collector-contrib:latest
+    volumes:
+      - ./in_config.yml:/etc/otel/config.yaml
+    ports:
+      - 3003:3003
+    depends_on:
+      - redpanda
+
+  # Follows otel_metrics topic and forwards to carbon-clickhouse
+  otel-out:
+    image: otel/opentelemetry-collector-contrib:latest
+    volumes:
+      - ./out_config.yml:/etc/otel/config.yaml
+      - ./out.json:/out.json
+    depends_on:
+      - redpanda
+      - carbon-clickhouse
+      - carbon-relay-ng
+
+  # Use carbon-relay-ng as a spool
+  carbon-relay-ng:
+    image: bodsch/docker-carbon-relay-ng:0.14.0
+    environment:
+      - GRAPHITE_HOST=carbon-clickhouse
+      - GRAPHITE_PORT=2003
+      - GRAPHITE_PICKLE=false
+      - GRAPHITE_SPOOLING=true
+    expose:
+      - 2003
+    ports:
+      - 8081:8081
+    depends_on:
+      - carbon-clickhouse
+      - clickhouse
+ 
+  # Write metrics to clickhouse
+  carbon-clickhouse:
+    image: lomik/carbon-clickhouse:latest
+    volumes:
+      - ./carbon-clickhouse.conf:/etc/carbon-clickhouse/carbon-clickhouse.conf
+    expose:
+      - 2003
+    depends_on:
+      - clickhouse
+
+  # Metrics database
+  clickhouse:
+    container_name: clickhouse
+    image: yandex/clickhouse-server
+    volumes:
+      - ./clickhouse-config.xml:/etc/clickhouse-server/config.xml
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    ports:
+      - 8123:8123
+    expose:
+      - 9000
+
+#  graphite_clickhouse:
+#  grafana:
+# TODO
+#  fluentbit:
+#  elasticsearch:
+#  kibana:
